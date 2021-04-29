@@ -1,152 +1,94 @@
-<!DOCTYPE HTML>
-<html>
-<head>
-    <title>PDO - Read Records - PHP CRUD Tutorial</title>
-     
-    <!-- Latest compiled and minified Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
-         
-    <!-- custom css -->
-    <style>
-    .m-r-1em{ margin-right:1em; }
-    .m-b-1em{ margin-bottom:1em; }
-    .m-l-1em{ margin-left:1em; }
-    .mt0{ margin-top:0; }
-    </style>
- 
-</head>
-<body>
- 
-    <!-- container -->
-    <div class="container">  
-        <div class="page-header">
-            <h1>Read Products</h1>
-        </div>
-     
-        <?php
-        // include database connection
-        include 'config/database.php';
+<?php
+    // set page title
+    $page_title = "Home Page";
 
-        // page is the current page, if there's nothing set, default is page 1
-        $page = isset($_GET['page']) ? $_GET['page'] : 1;
-        
-        // set records or rows of data per page
-        $records_per_page = 5;
-        
-        // calculate for the query LIMIT clause
-        $from_record_num = ($records_per_page * $page) - $records_per_page;
-        
-        // delete message prompt will be here
-        $action = isset($_GET['action']) ? $_GET['action'] : "";
- 
-        // if it was redirected from delete.php
-        if($action=='deleted'){
-            echo "<div class='alert alert-success'>Record was deleted.</div>";
-        }
-        
-        // select all data
-        // $query = "SELECT id, name, description, price FROM products ORDER BY id DESC";
-        // $stmt = $con->prepare($query);
-        // $stmt->execute();
-        
-        // select data for current page
-        $query = "SELECT id, name, description, price FROM products ORDER BY id DESC
-        LIMIT :from_record_num, :records_per_page";
+    // To include the database
+    include_once './config/database.php';
 
-        $stmt = $con->prepare($query);
-        $stmt->bindParam(":from_record_num", $from_record_num, PDO::PARAM_INT);
-        $stmt->bindParam(":records_per_page", $records_per_page, PDO::PARAM_INT);
-        $stmt->execute();
+    // To include the header html
+    include_once "./layout_head.php";
 
-        // this is how to get number of rows returned
-        $num = $stmt->rowCount();
-        
-        // link to create record form
-        echo "<a href='create.php' class='btn btn-primary m-b-1em'>Create New Product</a>";
-        
-        //check if more than 0 record found
-        if($num>0){
-            echo "<table class='table table-hover table-responsive table-bordered'>";//start table
-            //creating our table heading
+    // Pagination Variables
+    $page = isset($_GET['page']) ? $_GET['page'] : 1;
+
+    $per_page = 5;
+
+    // To calculate for the query LIMIT clause
+    $from_record_num = ($per_page * $page) - $per_page;
+
+    // Delete message prompt
+    $action = isset($_GET['action']) ? $_GET['action'] : "";
+
+    if($action == 'deleted') {
+        echo "<div class='alert alert-success'>Product deleted successfully!</div>";
+    }
+
+    // Select all the data
+    $query = "SELECT id, name, description, price FROM products ORDER BY id DESC LIMIT :from_record_num, :per_page";
+    $stm = $conn->prepare($query);
+
+    // To bind the parameters
+    $stm->bindParam(':from_record_num', $from_record_num, PDO::PARAM_INT);
+    $stm->bindParam(':per_page', $per_page, PDO::PARAM_INT);
+
+    $stm->execute();
+
+    // To get number of rows returned
+    $num = $stm->rowCount();
+
+    // Link to create records
+    echo "<a href='create.php' class='btn btn-primary m-b-1em'>Create New Product</a>";
+
+    // To check for Records in the database
+    if($num > 0) {
+        // Data from databse is retrieved
+        echo "<table class='table table-hover table-responsive table-bordered'>";
+            // Table Headings
             echo "<tr>";
                 echo "<th>ID</th>";
                 echo "<th>Name</th>";
                 echo "<th>Description</th>";
                 echo "<th>Price</th>";
-                echo "<th>Action</th>";
+                echo "<th>Actions</th>";
             echo "</tr>";
-            
-            // retrieve our table contents
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)){
-                // extract row
-                // this will make $row['firstname'] to
-                // just $firstname only
+
+            // Table body
+            while($row = $stm->fetch(PDO::FETCH_ASSOC)) {
                 extract($row);
-                
-                // creating new table row per record
+
                 echo "<tr>";
                     echo "<td>{$id}</td>";
                     echo "<td>{$name}</td>";
                     echo "<td>{$description}</td>";
                     echo "<td>#{$price}</td>";
                     echo "<td>";
-                        // read one record 
-                        echo "<a href='read_one.php?id={$id}' class='btn btn-info m-r-1em'>Read</a>";
-                        
-                        // we will use this links on next part of this post
-                        echo "<a href='update.php?id={$id}' class='btn btn-primary m-r-1em'>Edit</a>";
-            
-                        // we will use this links on next part of this post
-                        echo "<a href='#' onclick='delete_user({$id});'  class='btn btn-danger'>Delete</a>";
+                        // Link to show Single Item
+                        echo "<a href='read_one.php?id={$id}' class='btn btn-info m-r-1em m-b-1em'>Read</a>";
+                        // Link to edit a product
+                        echo "<a href='update.php?id={$id}' class='btn btn-primary m-r-1em m-b-1em'>Edit</a>";
+                        // Link to delete a product
+                        echo "<a href='#' onclick='deleteProduct({$id});' class='btn btn-danger m-b-1em'>Delete</a>";
                     echo "</td>";
                 echo "</tr>";
             }
-            // end table
-            echo "</table>";
 
-            // PAGINATION
-            // count total number of rows
-            $query = "SELECT COUNT(*) as total_rows FROM products";
-            $stmt = $con->prepare($query);
-            
-            // execute query
-            $stmt->execute();
-            
-            // get total rows
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $total_rows = $row['total_rows'];
+        echo "</table>";
 
-            // paginate records
-            $page_url="index.php?";
-            include_once "paging.php";
-                
-        }
-        // if no records found
-        else{
-            echo "<div class='alert alert-danger'>No records found.</div>";
-        }
-        ?>
-         
-    </div> <!-- end .container -->
-     
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    
-    <!-- Latest compiled and minified Bootstrap JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    
-    <script type='text/javascript'>
-    // confirm record deletion
-    function delete_user( id ){
-        
-        var answer = confirm('Are you sure?');
-        if (answer){
-            // if user clicked ok, 
-            // pass the id to delete.php and execute the delete query
-            window.location = 'delete.php?id=' + id;
-        } 
+        // PAGINATION
+        $query = "SELECT COUNT(*) as total_rows FROM products";
+        $stmt = $conn->prepare($query);
+        $stmt->execute();
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $total_rows = $row['total_rows'];
+
+        // Paginate Records
+        $page_url = "index.php?";
+        include_once "./paging.php";
+    }else {
+        echo "<div class='alert alert-danger'>No Records Found! </div>";
     }
-    </script>
- 
-</body>
-</html>
+
+    // To include footer html
+    include_once "layout_foot.php";
+?>
